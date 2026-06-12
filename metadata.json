@@ -1,0 +1,8 @@
+{
+  "name": "Navigateur de Thèse Jauge τ124",
+  "description": "Modèle de simulation 3D interactif et système de confrontation de soutenance de thèse pour la validation de la jauge conforme τ124 contre les cascades réplicatives 3D.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
