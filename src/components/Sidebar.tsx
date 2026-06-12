@@ -249,7 +249,7 @@ export default function Sidebar({
           {trans.telemetryDesc}
         </p>
         <div className="mt-2 text-[9px] bg-slate-900 border border-slate-800 p-1.5 rounded overflow-x-hidden text-ellipsis whitespace-nowrap text-indigo-300" id="telemetry-host">
-          https://omniutil-web-humangos-projects.vercel.app
+          https://th-se-math-thermo.vercel.app/
         </div>
       </div>
     </aside>
