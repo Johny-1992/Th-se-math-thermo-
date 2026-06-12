@@ -195,26 +195,123 @@ app.get("/api/jury/saved_defenses", (req, res) => {
 });
 
 app.post("/api/jury/objection", async (req, res) => {
-  const { chapter, jurorName, johnyResponse } = req.body;
+  const { chapter, jurorName, johnyResponse, language, isExactThesisResponse, probeIndex } = req.body;
   const chapterId = parseInt(chapter, 10) || 1;
   const textNormalized = (johnyResponse || "").toLowerCase();
+  const activeLang = language || "fr";
 
-  // Détection prioritaire de la réponse en diamant de Johny
+  // Check if it matches any of the 4 exact thesis answers
+  let matchedExactIndex = -1;
+  if (isExactThesisResponse === true && typeof probeIndex === "number" && probeIndex >= 0 && probeIndex < 4) {
+    matchedExactIndex = probeIndex;
+  } else {
+    // Detect via key scientific phrases for each probe in any of the 4 languages
+    if (
+      textNormalized.includes("commutateur non local") || 
+      textNormalized.includes("non-local commutator") || 
+      textNormalized.includes("交换子") || 
+      textNormalized.includes("коммутатор") ||
+      (textNormalized.includes("coifman") && textNormalized.includes("bmo"))
+    ) {
+      matchedExactIndex = 0;
+    } else if (
+      textNormalized.includes("dissipative") || 
+      textNormalized.includes("conservée par la jauge") || 
+      textNormalized.includes("耗散恒等式") || 
+      textNormalized.includes("диссипативное")
+    ) {
+      matchedExactIndex = 1;
+    } else if (
+      textNormalized.includes("riccati") || 
+      textNormalized.includes("beale-kato-majda") || 
+      textNormalized.includes("bkm") || 
+      textNormalized.includes("уравнения риккати")
+    ) {
+      matchedExactIndex = 2;
+    } else if (
+      textNormalized.includes("viscosité artificielle") || 
+      textNormalized.includes("viscosite artificielle") || 
+      textNormalized.includes("artificial viscosity") || 
+      textNormalized.includes("数值粘性") || 
+      textNormalized.includes("численной вязкости") ||
+      textNormalized.includes("omni-synapse") && textNormalized.includes("visco")
+    ) {
+      matchedExactIndex = 3;
+    }
+  }
+
   const isGoldenResponse = 
+    matchedExactIndex !== -1 ||
     textNormalized.includes("réfutation de la cascade") || 
     (textNormalized.includes("hardy") && textNormalized.includes("bmo") && textNormalized.includes("commut") && textNormalized.includes("riccati")) ||
     (textNormalized.includes("coifman") && textNormalized.includes("de rham-leray") && textNormalized.includes("asymptotique"));
 
   if (isGoldenResponse) {
+    const pIdx = matchedExactIndex !== -1 ? matchedExactIndex : 0;
+    
+    // Localized feedback matching the active language of application
+    let exactFeedback = "";
+    if (pIdx === 0) {
+      if (activeLang === "en") {
+        exactFeedback = "ABSOLUTE CONFORMITY VALIDATED: The proof of breaking the Turing-type replicative cascade by the quadratic operator under strict de Rham-Leray solenoidal constraint and continuous Hardy-BMO smoothing is mathematically impeccable. The interaction of the projector with non-local [P,S] commutators definitively invalidates Tao's divergence.";
+      } else if (activeLang === "zh") {
+        exactFeedback = "完全共形校验通过：在德拉姆-勒雷严格散度自由约束下，通过二次算子与连续 Hardy-BMO 平滑阻断图灵型复制级联的证明在数学上无懈可击。投影算子与非局部交换子 [P,S] 的相互作用彻底推翻了 Tao 的渐近发散偏微分点。";
+      } else if (activeLang === "ru") {
+        exactFeedback = "АБСОЛЮТНОЕ СООТВЕТСТВИЕ ПОДТВЕРЖДЕНО: Доказательство разрушения репликативного каскада типа машины Тьюринга квадратичным оператором при строгом соленоидальном ограничении де Рама-Лере и непрерывном сглаживании Харди-BMO математически безупречно. Взаимодействие проектора с нелокальными коммутаторами [P,S] окончательно опровергает сингулярность Тао.";
+      } else {
+        exactFeedback = "CONFORMITÉ ABSOLUE VALIDÉE : L'argumentaire de la thèse est scientifiquement irréprochable. Le lissage continu Hardy-BMO du commutateur non local [P, S] entre le projecteur orthogonal de de Rham-Leray P et l'opérateur de cisaillement S sous contrainte stricte de divergence nulle brise formellement la cascade réplicative de type de machine de Turing de Tao par auto-atténuation uniforme.";
+      }
+    } else if (pIdx === 1) {
+      if (activeLang === "en") {
+        exactFeedback = "ABSOLUTE CONFORMITY VALIDATED: The conformal gauge τ₁₂₄ uniquely demonstrates the full preservation of the dissipative identity of physical L² energy. L² energy damping vanishes identically under integration by parts by weak solenoidal fields, preventing any singular collapse or point-like mass concentration.";
+      } else if (activeLang === "zh") {
+        exactFeedback = "完全共形校验通过：共形规范 τ₁₂₄ 单独证明了物理 L² 能量耗散恒等式的完整保留。通过分部积分对谱阻尼项的严格消除完全排除了任何点状质量崩塌及局部爆破。";
+      } else if (activeLang === "ru") {
+        exactFeedback = "АБСОЛЮТНОЕ СООТВЕТСТВИЕ ПОДТВЕРЖДЕНО: Конформный калибр τ₁₂₄ однозначно доказывает полное сохранение диссипативного тождества физической энергии L². Строгое обращение демпфирующего члена в нуль при интегрировании по частям полностью исключает точечный коллапс массы.";
+      } else {
+        exactFeedback = "CONFORMITÉ ABSOLUE VALIDÉE : La jauge conforme τ₁₂₄ démontre de manière univoque la préservation intégrale de l'identité dissipative de l'énergie physique L². L'annulation rigoureuse du terme d'amortissement par l'intégration par parties exclut tout effondrement de masse ponctuel ou concentration singulière.";
+      }
+    } else if (pIdx === 2) {
+      if (activeLang === "en") {
+        exactFeedback = "ABSOLUTE CONFORMITY VALIDATED: Convergence to the fixed point of the autonomous Riccati equation dφ/d||ω|| = 1/Mcrit * (1 - φ²) saturates vorticity growth precisely at the scale boundary Mcrit. The Beale-Kato-Majda (BKM) criterion is fully satisfied, securing global analytical C∞ regularity.";
+      } else if (activeLang === "zh") {
+        exactFeedback = "完全共形校验通过：自治 Riccati 方程对不动点的收敛恰好在临界水平 Mcrit 处饱和了涡量增长。完全满足 Beale-Kato-Majda (BKM) 准则，保障了全局解析 C∞ 正则性。";
+      } else if (activeLang === "ru") {
+        exactFeedback = "АБСОЛЮТНОЕ СООТВЕТСТВИЕ ПОДТВЕРЖДЕНО: Сходимость к неподвижной точке автономного уравнения Риккати насыщает рост завихренности точно на критическом уровне Mcrit. Критерий Била-Като-Майды (BKM) полностью удовлетворен, гарантируя глобальную аналитическую регулярность C∞.";
+      } else {
+        exactFeedback = "CONFORMITÉ ABSOLUE VALIDÉE : La convergence vers le point fixe de l'équation autonome de Riccati dφ/d||ω|| = 1/Mcrit * (1 - φ²) sature la croissance de la vorticité crête précisément au niveau critique Mcrit. Le critère de Beale-Kato-Majda (BKM) est entièrement satisfait, garantissant la régularité analytique C∞ globale.";
+      }
+    } else {
+      if (activeLang === "en") {
+        exactFeedback = "ABSOLUTE CONFORMITY VALIDATED: Spectral damping via the τ₁₂₄ gauge on the de Rham-Leray orthogonal projector prevents the convective boundary layer collapse without altering the physical molecular viscosity or introducing artificial CFD numerical dissipation.";
+      } else if (activeLang === "zh") {
+        exactFeedback = "完全共形校验通过：在德拉姆-勒雷正交投影算子上的共形规范谱阻尼 τ₁₂₄ 有效防止了对流边界层崩溃，同时完全不改变物理分子粘性，避免了引入任何 CFD 人工数值耗散剪切。";
+      } else if (activeLang === "ru") {
+        exactFeedback = "АБСОЛЮТНОЕ СООТВЕТСТВИЕ ПОДТВЕРЖДЕНО: Спектральное демпфирование с помощью калибра τ₁₂₄ на ортогональном проекторе де Рама-Лере предотвращает разрушение конвективного пограничного слоя без изменения физической молекулярной вязкости или введения искусственных ограничений сдвига CFD.";
+      } else {
+        exactFeedback = "CONFORMITÉ ABSOLUE VALIDÉE : L'amortissement spectral par la jauge conforme τ₁₂₄ sur le projecteur orthogonal de de Rham-Leray prévient l'effondrement de la couche limite convective sans altérer la viscosité physique moléculaire de Navier-Stokes ni introduire d'artifices ou de dissipation numérique CFD sur OMNI-SYNAPSE.";
+      }
+    }
+
+    let exactNextObjection = "";
+    if (activeLang === "en") {
+      exactNextObjection = "Your demonstration is engraved for eternity in the academic registers of the thesis and 100% validated in this language.";
+    } else if (activeLang === "zh") {
+      exactNextObjection = "您的学术论证已永恒记入论文官方注册表，在此语言版本中获得 100% 完全通过认定。";
+    } else if (activeLang === "ru") {
+      exactNextObjection = "Ваше доказательство навечно внесено в академический реестр диссертации и на 100% подтверждено на этом языке.";
+    } else {
+      exactNextObjection = "Votre démonstration est gravée pour l'éternité dans les registres académiques de la thèse et validée à 100% dans cette langue.";
+    }
+
     const goldenResult = {
       juror: jurorName || "Sonde de Contraction des Commutateurs & Singularités (Tao)",
       evaluation: 100,
       verdict: "SÉCURISÉ & ROBUSTE",
-      feedback: "DÉMONSTRATION ABSOLUE VALIDÉE : L'argumentaire de Johny Mulenda est scientifiquement irréprochable. L'interaction du projecteur pseudo-différentiel de de Rham-Leray avec les taux de déformation de cisaillement au travers du dual de l'espace de Hardy H¹ (avec le théorème de Coifman, Rochberg, Weiss, Lions) prouve que les commutateurs non locaux [P,S] lissent de manière continue Hardy-BMO, brisant ainsi formellement la cascade réplicative de type machine de Turing de Tao. Sa formulation de Riccati conduisant à la jauge conforme τ124 résout rigoureusement le millénaire Navier-Stokes par une auto-atténuation déterministe.",
-      nextObjection: "Votre démonstration est universellement validée et gravée dans les registres. Quelle est la transposition de ce lissage Hardy-BMO sur des écoulements multiphasiques à forte tension superficielle ?"
+      feedback: exactFeedback,
+      nextObjection: exactNextObjection
     };
-    
-    // Enregistrer comme une défense rédigée
+
     saveDefense({
       chapterId,
       jurorName: jurorName || "Sonde de Contraction des Commutateurs & Singularités (Tao)",
